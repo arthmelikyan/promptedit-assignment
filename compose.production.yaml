@@ -1,0 +1,124 @@
+name: ${COMPOSE_PROJECT_NAME:-promptedit-assignment}
+
+x-app: &app
+    image: ${COMPOSE_PROJECT_NAME:-promptedit-assignment}-php:production
+    build:
+        context: .
+        target: production
+    env_file: .env
+    environment:
+        APP_ENV: production
+        APP_DEBUG: 'false'
+        DB_CONNECTION: pgsql
+        DB_HOST: postgres
+        DB_PORT: 5432
+        REDIS_HOST: redis
+        QUEUE_CONNECTION: redis
+        CACHE_STORE: redis
+        BROADCAST_CONNECTION: reverb
+        LOG_CHANNEL: stderr
+        REVERB_HOST: reverb
+        REVERB_PORT: 8080
+        REVERB_SCHEME: http
+        REVERB_SERVER_HOST: 0.0.0.0
+        REVERB_SERVER_PORT: 8080
+        INERTIA_SSR_ENABLED: 'false'
+    init: true
+    restart: unless-stopped
+    healthcheck:
+        disable: true
+    volumes:
+        - storage:/app/storage
+
+services:
+    migrate:
+        <<: *app
+        restart: 'no'
+        command: ['php', 'artisan', 'migrate', '--force', '--no-interaction']
+        depends_on:
+            postgres:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+    app:
+        <<: *app
+        ports:
+            - '127.0.0.1:${APP_PORT:-8088}:8080'
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+            reverb:
+                condition: service_started
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'curl',
+                    '--fail',
+                    '--silent',
+                    'http://localhost:8080/up',
+                ]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+            start_period: 20s
+    horizon:
+        <<: *app
+        command: ['php', 'artisan', 'horizon', '--no-interaction']
+        stop_grace_period: 90s
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+    reverb:
+        <<: *app
+        command: ['php', 'artisan', 'reverb:start', '--no-interaction']
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+    scheduler:
+        <<: *app
+        command: ['php', 'artisan', 'schedule:work', '--no-interaction']
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+    postgres:
+        image: postgres:18-bookworm
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: ${DB_DATABASE:-promptedit_assignment}
+            POSTGRES_USER: ${DB_USERNAME:-promptedit}
+            POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+        volumes:
+            - postgres:/var/lib/postgresql
+        healthcheck:
+            test:
+                [
+                    'CMD-SHELL',
+                    'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 10
+    redis:
+        image: redis:8-bookworm
+        restart: unless-stopped
+        command:
+            [
+                'redis-server',
+                '--appendonly',
+                'yes',
+                '--maxmemory-policy',
+                'noeviction',
+            ]
+        volumes:
+            - redis:/data
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+volumes:
+    postgres:
+    redis:
+    storage:

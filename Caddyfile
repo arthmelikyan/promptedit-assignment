@@ -1,0 +1,15 @@
+{
+    admin off
+    auto_https off
+    frankenphp
+}
+
+{$SERVER_NAME:8080} {
+    root * /app/public
+    encode zstd gzip
+
+    @reverb path /app/* /apps/*
+    reverse_proxy @reverb reverb:8080
+
+    php_server
+}

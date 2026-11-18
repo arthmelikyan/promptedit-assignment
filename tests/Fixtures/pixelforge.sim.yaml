@@ -1,0 +1,8 @@
+simulation: pixelforge-assessment
+routing: path
+mocks:
+    - name: Pixelforge
+      routeKey: pixelforge
+      origin:
+          - pixelforge.promptedit.dev
+      path: tests/Fixtures/PixelforgeMock

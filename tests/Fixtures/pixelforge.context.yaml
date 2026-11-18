@@ -1,0 +1,18 @@
+purpose: Verify the Laravel provider client against real HTTP serialization, failures and idempotency using the published assessment contract.
+assumptions:
+    - id: stable-idempotency
+      status: supported
+      claim: Pixelforge documents permanent account-scoped idempotency for identical generation requests.
+      reason: Safe submission retries depend on reusing the same key and input.
+      verification: Published API documentation reviewed. An isolated PostgreSQL integration test ran the real queued HTTP client against this stand-in; a submission accepted before a 10-second client timeout was retried with the same key, producing one provider record and one local charge.
+      source: https://pixelforge.promptedit.dev/docs#idempotency
+      updated_at: '2026-11-17'
+    - id: simulated-contract-coverage
+      status: unknown
+      claim: The local stand-in covers the documented paths exercised by integration tests, but is not a verified provider implementation.
+      reason: No published Pixelforge mock was found in Postman search with all ownership scopes.
+      verification: Local real-HTTP simulation passed for pricing, queued submission, accepted timeout recovery, retrieval, content rejection, and usage. The simulation request log confirmed these paths. Real-provider account configuration remains pending; rate limits, signed live deliveries, and live provider reconciliation are not established by this stand-in.
+      source: tests/Fixtures/PixelforgeMock/default.js
+      updated_at: '2026-11-17'
+fingerprints:
+    postman_cli: 1.86.0

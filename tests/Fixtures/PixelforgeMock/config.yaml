@@ -1,0 +1,11 @@
+version: 1
+name: Pixelforge assessment contract
+slug: pixelforge
+protocol: http
+port: 4500
+origin: pixelforge.promptedit.dev
+interceptRequests: true
+scenarios:
+    - name: default
+      path: ./default.js
+      default: true
