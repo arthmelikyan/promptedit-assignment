@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'PromptEdit'),
 
+    'admin_password' => env('ADMIN_PASSWORD', 'testingadmin1234'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment

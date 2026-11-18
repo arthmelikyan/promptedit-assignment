@@ -5,6 +5,8 @@ use Database\Seeders\AdminUserSeeder;
 use Illuminate\Support\Facades\Hash;
 
 test('database seeding creates one verified administrator who can log in', function () {
+    config(['app.admin_password' => 'testingadmin1234']);
+
     $this->seed();
 
     $user = User::query()->where('email', 'testingadmin@gmail.com')->firstOrFail();
@@ -22,6 +24,7 @@ test('database seeding creates one verified administrator who can log in', funct
 });
 
 test('admin seeding promotes an existing account without duplicating users', function () {
+    config(['app.admin_password' => 'custom-review-password']);
     $user = User::factory()->unverified()->create(['email' => 'testingadmin@gmail.com']);
 
     $this->seed(AdminUserSeeder::class);
@@ -30,4 +33,15 @@ test('admin seeding promotes an existing account without duplicating users', fun
     $this->assertDatabaseCount('users', 1);
     expect($user->fresh()->is_admin)->toBeTrue();
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
+    expect(Hash::check('custom-review-password', $user->fresh()->password))->toBeTrue();
+});
+
+test('admin seeding rejects the public default in production', function () {
+    $this->app->instance('env', 'production');
+    config(['app.admin_password' => 'testingadmin1234']);
+
+    expect(fn () => app(AdminUserSeeder::class)->run())
+        ->toThrow(RuntimeException::class, 'Set a non-empty ADMIN_PASSWORD and use a unique password in production.');
+
+    $this->assertDatabaseCount('users', 0);
 });
